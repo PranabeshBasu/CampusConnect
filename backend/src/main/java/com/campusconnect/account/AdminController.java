@@ -7,9 +7,12 @@ import com.campusconnect.account.Dtos.PageResponse;
 import com.campusconnect.account.Dtos.UpdateUserRequest;
 import com.campusconnect.account.Dtos.UserResponse;
 import com.campusconnect.auth.AuthUser;
+import com.campusconnect.auth.Role;
+import com.campusconnect.auth.UserRepository;
 import com.campusconnect.department.DepartmentService;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,9 +35,33 @@ public class AdminController {
     private final AccountService accounts;
     private final DepartmentService departments;
 
+    @Autowired(required = false)
+    private UserRepository userRepository;
+
     public AdminController(AccountService accounts, DepartmentService departments) {
         this.accounts = accounts;
         this.departments = departments;
+    }
+
+    public record UserSummaryResponse(
+            long total,
+            long students,
+            long spocs,
+            long admins,
+            long active) {}
+
+    @GetMapping("/users/summary")
+    public UserSummaryResponse userSummary() {
+        if (userRepository == null) {
+            return new UserSummaryResponse(0, 0, 0, 0, 0);
+        }
+        return new UserSummaryResponse(
+                userRepository.count(),
+                userRepository.countByRole(Role.STUDENT),
+                userRepository.countByRole(Role.DEPARTMENT_SPOC),
+                userRepository.countByRole(Role.PLACEMENT_ADMIN),
+                userRepository.countByEnabledTrue()
+        );
     }
 
     @GetMapping("/users")

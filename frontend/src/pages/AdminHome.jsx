@@ -3,6 +3,7 @@ import { Download, ExternalLink, Eye, FileText, Lock, Plus, ShieldCheck, Unlock,
 import {
   createDepartment,
   createUser,
+  getUserSummary,
   importStudentRegistryCsv,
   importStudentsCsv,
   listDepartments,
@@ -129,6 +130,7 @@ export default function AdminHome() {
 
   const [departments, setDepartments] = useState([]);
   const [users, setUsers] = useState(null);
+  const [userSummary, setUserSummary] = useState(null);
   const [page, setPage] = useState(0);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -174,9 +176,14 @@ export default function AdminHome() {
 
   const load = useCallback(async () => {
     try {
-      const [d, u] = await Promise.all([listDepartments(), listUsers(page, 25)]);
+      const [d, u, s] = await Promise.all([
+        listDepartments(),
+        listUsers(page, 25),
+        getUserSummary().catch(() => null),
+      ]);
       setDepartments(d);
       setUsers(u);
+      if (s) setUserSummary(s);
       setError('');
       setSelectedDeptId((prev) => prev || (d[0]?.id ? String(d[0].id) : ''));
     } catch (e) {
@@ -489,9 +496,12 @@ export default function AdminHome() {
       {tab === 'accounts' ? (
         <>
           {users && (
-            <div className="grid gap-4 sm:grid-cols-3">
-              <KpiCard label="Total Accounts" value={stats.total} />
-              <KpiCard label="Active on Page" value={stats.active} tone="ok" />
+            <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
+              <KpiCard label="Total Accounts" value={userSummary?.total ?? stats.total} />
+              <KpiCard label="Students" value={userSummary?.students ?? '—'} tone="pri" />
+              <KpiCard label="SPOCs" value={userSummary?.spocs ?? '—'} tone="warn" />
+              <KpiCard label="Admins" value={userSummary?.admins ?? '—'} />
+              <KpiCard label="Active Accounts" value={userSummary?.active ?? stats.active} tone="ok" />
               <KpiCard label="Departments" value={stats.departments} tone="pri" />
             </div>
           )}
